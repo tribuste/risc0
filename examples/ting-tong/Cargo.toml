@@ -9,6 +9,7 @@ risc0-zkvm = { path = "../../risc0/zkvm" }
 serde = "1.0"
 ting-tong-core = { path = "core" }
 ting-tong-methods = { path = "methods" }
+throbber = "0.1.4"
 
 [features]
 cuda = ["risc0-zkvm/cuda"]

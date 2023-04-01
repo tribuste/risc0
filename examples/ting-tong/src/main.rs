@@ -14,15 +14,15 @@
 
 use std::io::{stdin, stdout, Write};
 
+use rand::Rng;
 use risc0_zkvm::{
     serde::{from_slice, to_vec},
     sha::Digest,
     Prover, Receipt,
 };
+use throbber::Throbber;
 use ting_tong_core::{GameState, Guess, Score};
 use ting_tong_methods::{TING_TONG_ELF, TING_TONG_ID};
-
-use rand::Rng;
 
 struct HonestServer {
     secret: Guess,
@@ -81,7 +81,7 @@ impl Player {
         return Score {
             server_score: game_state.server_count,
             player_score: game_state.player_count,
-        }
+        };
     }
 }
 
@@ -146,6 +146,8 @@ fn read_stdin_guess() -> Guess {
 }
 
 fn game_is_won(score: &Score) -> bool {
+    println!("\nServer score: {}", score.server_score);
+    println!("Player score: {}", score.player_score);
     if score.server_score == 0 {
         println!("You lost!!");
         true
@@ -158,6 +160,8 @@ fn game_is_won(score: &Score) -> bool {
 }
 
 fn main() {
+    let mut throbber = Throbber::new().message("Generating proof".to_string());
+
     println!("Let's play TING TONG!!");
 
     let mut game_won = false;
@@ -173,9 +177,10 @@ fn main() {
         };
 
         let player_guess = read_stdin_guess();
+        throbber.start();
         let receipt = server_guess.eval_round(player_guess, &score);
         score = player.check_receipt(receipt);
-
+        throbber.success("Success".to_string());
         game_won = game_is_won(&score);
     }
 }
