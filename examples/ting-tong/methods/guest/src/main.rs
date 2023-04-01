@@ -2,46 +2,40 @@
 
 use risc0_zkvm::guest::env;
 use risc0_zkvm::sha::{Impl, Sha256};
-use ting_tong_core::{GameState, Guess, Score};
+use ting_tong_core::{GameState, Play, Score};
 
 risc0_zkvm::guest::entry!(main);
 
 pub fn main() {
-    let server_guess: Guess = env::read();
-    let player_guess: Guess = env::read();
+    let server_play: Play = env::read();
+    let player_play: Play = env::read();
+    // actual game score (from previous rounds)
     let mut score: Score = env::read();
 
-    if player_guess.secret_guess == 5 && player_guess.secret_choice == 5 {
-        let server_hash =
-            *Impl::hash_bytes(&[server_guess.secret_guess, server_guess.secret_choice]);
-
+    if player_play.secret_guess == 5 && player_play.secret_choice == 5 {
+        let server_hash = *Impl::hash_bytes(&[server_play.secret_guess, server_play.secret_choice]);
         let game_state = GameState {
             server_hash,
-            server_count: score.server_score,
-            player_count: score.player_score,
+            server_score: score.server_score,
+            player_score: score.player_score,
         };
 
         env::commit(&game_state);
     } else {
-        let correct = server_guess.secret_choice + player_guess.secret_choice;
+        let thumbs_up = server_play.secret_choice + player_play.secret_choice;
 
-        let player_result = player_guess.secret_guess == correct;
-        let server_result = server_guess.secret_guess == correct;
-
-        if server_result {
+        if server_play.secret_guess == thumbs_up {
             score.server_score -= 1;
         }
-        if player_result {
+        if player_play.secret_guess == thumbs_up {
             score.player_score -= 1;
         }
 
-        let server_hash =
-            *Impl::hash_bytes(&[server_guess.secret_guess, server_guess.secret_choice]);
-        // let server_hash = *Impl::hash_bytes(&to_vec(&server_guess).unwrap());
+        let server_hash = *Impl::hash_bytes(&[server_play.secret_guess, server_play.secret_choice]);
         let game_state = GameState {
             server_hash,
-            server_count: score.server_score,
-            player_count: score.player_score,
+            server_score: score.server_score,
+            player_score: score.player_score,
         };
 
         env::commit(&game_state);

@@ -21,27 +21,25 @@ use risc0_zkvm::{
     Prover, Receipt,
 };
 use throbber::Throbber;
-use ting_tong_core::{GameState, Guess, Score};
+use ting_tong_core::{GameState, Play, Score};
 use ting_tong_methods::{TING_TONG_ELF, TING_TONG_ID};
 
-struct HonestServer {
-    secret: Guess,
+struct Server {
+    secret: Play,
 }
 
-impl HonestServer {
-    pub fn new_guess() -> Self {
-        let choice = rand::thread_rng().gen_range(0..3);
-        let guess = rand::thread_rng().gen_range(0..5);
-        HonestServer {
-            secret: Guess {
-                secret_choice: choice,
-                secret_guess: guess,
+impl Server {
+    pub fn new_play() -> Self {
+        Server {
+            secret: Play {
+                secret_choice: rand::thread_rng().gen_range(0..3),
+                secret_guess: rand::thread_rng().gen_range(0..5),
             },
         }
     }
 
     pub fn get_secret(&self) -> Digest {
-        let dummy_guess = Guess {
+        let dummy_guess = Play {
             secret_choice: 5,
             secret_guess: 5,
         };
@@ -49,10 +47,11 @@ impl HonestServer {
         let score = Score::default();
         let receipt = self.eval_round(dummy_guess, &score);
         let game_state: GameState = from_slice(&receipt.journal).unwrap();
+
         game_state.server_hash
     }
 
-    pub fn eval_round(&self, player_guess: Guess, score: &Score) -> Receipt {
+    pub fn eval_round(&self, player_guess: Play, score: &Score) -> Receipt {
         let mut prover = Prover::new(TING_TONG_ELF).expect("failed to construct prover");
 
         prover.add_input_u32_slice(to_vec(&self.secret).unwrap().as_slice());
@@ -79,15 +78,15 @@ impl Player {
         }
 
         return Score {
-            server_score: game_state.server_count,
-            player_score: game_state.player_count,
+            server_score: game_state.server_score,
+            player_score: game_state.player_score,
         };
     }
 }
 
-fn read_stdin_guess() -> Guess {
+fn read_stdin_guess() -> Play {
     let mut line = String::new();
-    let mut guess = Guess {
+    let mut guess = Play {
         secret_choice: 0,
         secret_guess: 0,
     };
@@ -146,8 +145,12 @@ fn read_stdin_guess() -> Guess {
 }
 
 fn game_is_won(score: &Score) -> bool {
-    println!("\nServer score: {}", score.server_score);
-    println!("Player score: {}", score.player_score);
+    // print the actual score of the game
+    println!(
+        "\nServer hands: {}\tPlayer hands: {}",
+        score.server_score, score.player_score
+    );
+
     if score.server_score == 0 {
         println!("You lost!!");
         true
@@ -160,7 +163,7 @@ fn game_is_won(score: &Score) -> bool {
 }
 
 fn main() {
-    let mut throbber = Throbber::new().message("Generating proof".to_string());
+    let mut throbber = Throbber::new().message("Generating proof/Verification".to_string());
 
     println!("Let's play TING TONG!!");
 
@@ -171,16 +174,18 @@ fn main() {
     };
 
     while game_won == false {
-        let server_guess = HonestServer::new_guess();
+        let server_guess = Server::new_play();
         let player = Player {
             hash: server_guess.get_secret(),
         };
 
         let player_guess = read_stdin_guess();
+
         throbber.start();
         let receipt = server_guess.eval_round(player_guess, &score);
         score = player.check_receipt(receipt);
         throbber.success("Success".to_string());
+
         game_won = game_is_won(&score);
     }
 }
