@@ -19,7 +19,7 @@ use risc0_zkvm::{
     sha::Digest,
     Prover, Receipt,
 };
-use ting_tong_core::{GameState, Guess};
+use ting_tong_core::{GameState, Guess, Score};
 use ting_tong_methods::{TING_TONG_ELF, TING_TONG_ID};
 
 use rand::Rng;
@@ -46,16 +46,18 @@ impl HonestServer {
             secret_guess: 5,
         };
 
-        let receipt = self.eval_round(dummy_guess);
+        let score = Score::default();
+        let receipt = self.eval_round(dummy_guess, &score);
         let game_state: GameState = from_slice(&receipt.journal).unwrap();
         game_state.server_hash
     }
 
-    pub fn eval_round(&self, player_guess: Guess) -> Receipt {
+    pub fn eval_round(&self, player_guess: Guess, score: &Score) -> Receipt {
         let mut prover = Prover::new(TING_TONG_ELF).expect("failed to construct prover");
 
         prover.add_input_u32_slice(to_vec(&self.secret).unwrap().as_slice());
         prover.add_input_u32_slice(to_vec(&player_guess).unwrap().as_slice());
+        prover.add_input_u32_slice(to_vec(&score).unwrap().as_slice());
 
         return prover.run().unwrap();
     }
@@ -66,7 +68,7 @@ struct Player {
 }
 
 impl Player {
-    pub fn check_receipt(&self, receipt: Receipt) -> Vec<u8> {
+    pub fn check_receipt(&self, receipt: Receipt) -> Score {
         receipt
             .verify(&TING_TONG_ID)
             .expect("receipt verification failed");
@@ -76,7 +78,10 @@ impl Player {
             panic!("The hash mismatched, so the server cheated!");
         }
 
-        return vec![game_state.server_count, game_state.player_count];
+        return Score {
+            server_score: game_state.server_count,
+            player_score: game_state.player_count,
+        }
     }
 }
 
@@ -140,11 +145,11 @@ fn read_stdin_guess() -> Guess {
     guess
 }
 
-fn game_is_won(score: Vec<u8>) -> bool {
-    if score[0] == 0 {
+fn game_is_won(score: &Score) -> bool {
+    if score.server_score == 0 {
         println!("You lost!!");
         true
-    } else if score[1] == 0 {
+    } else if score.player_score == 0 {
         println!("You won!!");
         true
     } else {
@@ -156,6 +161,10 @@ fn main() {
     println!("Let's play TING TONG!!");
 
     let mut game_won = false;
+    let mut score = Score {
+        server_score: 2,
+        player_score: 2,
+    };
 
     while game_won == false {
         let server_guess = HonestServer::new_guess();
@@ -164,9 +173,9 @@ fn main() {
         };
 
         let player_guess = read_stdin_guess();
-        let receipt = server_guess.eval_round(player_guess);
-        let score = player.check_receipt(receipt);
+        let receipt = server_guess.eval_round(player_guess, &score);
+        score = player.check_receipt(receipt);
 
-        game_won = game_is_won(score);
+        game_won = game_is_won(&score);
     }
 }
