@@ -12,32 +12,21 @@ pub fn main() {
     // actual game score (from previous rounds)
     let mut score: Score = env::read();
 
-    if player_play.secret_guess == 5 && player_play.secret_choice == 5 {
-        let server_hash = *Impl::hash_bytes(&[server_play.secret_guess, server_play.secret_choice]);
-        let game_state = GameState {
-            server_hash,
-            server_score: score.server_score,
-            player_score: score.player_score,
-        };
+    let thumbs_up = server_play.secret_choice + player_play.secret_choice;
 
-        env::commit(&game_state);
-    } else {
-        let thumbs_up = server_play.secret_choice + player_play.secret_choice;
-
-        if server_play.secret_guess == thumbs_up {
-            score.server_score -= 1;
-        }
-        if player_play.secret_guess == thumbs_up {
-            score.player_score -= 1;
-        }
-
-        let server_hash = *Impl::hash_bytes(&[server_play.secret_guess, server_play.secret_choice]);
-        let game_state = GameState {
-            server_hash,
-            server_score: score.server_score,
-            player_score: score.player_score,
-        };
-
-        env::commit(&game_state);
+    if server_play.secret_guess == thumbs_up {
+        score.server_score -= 1;
     }
+    if player_play.secret_guess == thumbs_up {
+        score.player_score -= 1;
+    }
+
+    let server_hash = *Impl::hash_bytes(&[server_play.secret_guess, server_play.secret_choice]);
+    let game_state = GameState {
+        server_hash,
+        server_score: score.server_score,
+        player_score: score.player_score,
+    };
+
+    env::commit(&game_state);
 }

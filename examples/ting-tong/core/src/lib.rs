@@ -2,7 +2,7 @@ use risc0_zkvm::sha::Digest;
 use serde::{Deserialize, Serialize};
 
 // data accompanied with a one round of the game
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Play {
     pub secret_guess: u8,  // guess of how many thumbs will be up in total
     pub secret_choice: u8, // choice of how many thumbs you will raise up

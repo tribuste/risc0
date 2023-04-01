@@ -1,17 +1,3 @@
-// Copyright 2023 RISC Zero, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use std::io::{stdin, stdout, Write};
 
 use rand::Rng;
@@ -29,23 +15,20 @@ struct Server {
 }
 
 impl Server {
-    pub fn new_play() -> Self {
+    pub fn new_play(score: &Score) -> Self {
         Server {
             secret: Play {
-                secret_choice: rand::thread_rng().gen_range(0..3),
-                secret_guess: rand::thread_rng().gen_range(0..5),
+                secret_choice: rand::thread_rng().gen_range(0..=score.server_score),
+                secret_guess: rand::thread_rng().gen_range(0..=(score.player_score + score.player_score)),
             },
         }
     }
 
     pub fn get_secret(&self) -> Digest {
-        let dummy_guess = Play {
-            secret_choice: 5,
-            secret_guess: 5,
-        };
+        let dummy_guess = Play::default();
+        let dummy_score = Score::default();
 
-        let score = Score::default();
-        let receipt = self.eval_round(dummy_guess, &score);
+        let receipt = self.eval_round(dummy_guess, &dummy_score);
         let game_state: GameState = from_slice(&receipt.journal).unwrap();
 
         game_state.server_hash
@@ -84,7 +67,7 @@ impl Player {
     }
 }
 
-fn read_stdin_guess() -> Play {
+fn read_stdin_guess(score: &Score) -> Play {
     let mut line = String::new();
     let mut guess = Play {
         secret_choice: 0,
@@ -99,11 +82,11 @@ fn read_stdin_guess() -> Play {
 
         match line.parse::<u8>() {
             Ok(res) => {
-                if res < 3 {
+                if res <= score.player_score {
                     guess.secret_choice = res;
                     break;
                 } else {
-                    println!("WTF!? You have only 2 thumbs!!\n");
+                    println!("You don't have enought thumbs!! ;D\n");
                     line.clear();
                     continue;
                 }
@@ -124,7 +107,7 @@ fn read_stdin_guess() -> Play {
 
         match line.parse::<u8>() {
             Ok(res) => {
-                if res < 5 {
+                if res <= (score.player_score + score.server_score) {
                     guess.secret_guess = res;
                     break;
                 } else {
@@ -174,12 +157,12 @@ fn main() {
     };
 
     while game_won == false {
-        let server_guess = Server::new_play();
+        let server_guess = Server::new_play(&score);
         let player = Player {
             hash: server_guess.get_secret(),
         };
 
-        let player_guess = read_stdin_guess();
+        let player_guess = read_stdin_guess(&score);
 
         throbber.start();
         let receipt = server_guess.eval_round(player_guess, &score);
