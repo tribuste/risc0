@@ -12,6 +12,8 @@ members = [
     "password-checker",
     "password-checker/core",
     "sha",
+    "ting-tong",
+    "ting-tong/core",
     "waldo",
     "waldo/core",
     "wordle",

@@ -1,0 +1,16 @@
+[package]
+name = "ting-tong"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rand = "0.8.5"
+risc0-zkvm = { path = "../../risc0/zkvm" }
+serde = "1.0"
+ting-tong-core = { path = "core" }
+ting-tong-methods = { path = "methods" }
+
+[features]
+cuda = ["risc0-zkvm/cuda"]
+default = []
+metal = ["risc0-zkvm/metal"]
