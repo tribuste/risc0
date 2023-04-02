@@ -12,6 +12,14 @@ pub fn main() {
     // actual game score (from previous rounds)
     let mut score: Score = env::read();
 
+    if server_play.secret_choice > score.server_score {
+        panic!("Hey Server, you don't have enought thumbs!! ;D");
+    }
+
+    if server_play.secret_guess > (score.server_score + score.player_score) {
+        panic!("Players have only {} thumbs left in the game!!", (score.player_score + score.server_score));
+    }
+
     let thumbs_up = server_play.secret_choice + player_play.secret_choice;
 
     if server_play.secret_guess == thumbs_up {

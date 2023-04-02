@@ -24,11 +24,10 @@ impl Server {
         }
     }
 
-    pub fn get_secret(&self) -> Digest {
+    pub fn get_secret(&self, score: &Score) -> Digest {
         let dummy_guess = Play::default();
-        let dummy_score = Score::default();
 
-        let receipt = self.eval_round(dummy_guess, &dummy_score);
+        let receipt = self.eval_round(dummy_guess, score);
         let game_state: GameState = from_slice(&receipt.journal).unwrap();
 
         game_state.server_hash
@@ -111,7 +110,7 @@ fn read_stdin_guess(score: &Score) -> Play {
                     guess.secret_guess = res;
                     break;
                 } else {
-                    println!("2 players have only 4 thumbs in total!!");
+                    println!("Players have only {} thumbs left in the game!!", (score.player_score + score.server_score));
                     line.clear();
                     continue;
                 }
@@ -130,7 +129,7 @@ fn read_stdin_guess(score: &Score) -> Play {
 fn game_is_won(score: &Score) -> bool {
     // print the actual score of the game
     println!(
-        "\n\nServer hands: {}\tPlayer hands: {}\n",
+        "\n\nServer hands: {}\tPlayer hands: {}",
         score.server_score, score.player_score
     );
 
@@ -165,7 +164,7 @@ fn main() {
         let server_guess = Server::new_play(&score);
         commit_throbber.start();
         let player = Player {
-            hash: server_guess.get_secret(),
+            hash: server_guess.get_secret(&score),
         };
         commit_throbber.finish();
 
