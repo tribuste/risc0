@@ -75,7 +75,7 @@ fn read_stdin_guess(score: &Score) -> Play {
     };
 
     loop {
-        print!("Thumbs up!:");
+        println!("\nThumbs up!:");
         let _ = stdout().flush();
         stdin().read_line(&mut line).unwrap();
         line.pop(); // remove trailing newline
@@ -86,13 +86,13 @@ fn read_stdin_guess(score: &Score) -> Play {
                     guess.secret_choice = res;
                     break;
                 } else {
-                    println!("You don't have enought thumbs!! ;D\n");
+                    println!("You don't have enought thumbs!! ;D");
                     line.clear();
                     continue;
                 }
             }
             Err(_) => {
-                println!("Must by a number!!\n");
+                println!("Must by a number!!");
                 line.clear();
                 continue;
             }
@@ -100,7 +100,7 @@ fn read_stdin_guess(score: &Score) -> Play {
     }
     line.clear();
     loop {
-        print!("What is your guess? How many thumbs will be up!?:");
+        println!("What is your guess? How many thumbs will be up!?:");
         let _ = stdout().flush();
         stdin().read_line(&mut line).unwrap();
         line.pop(); // remove trailing newline
@@ -111,13 +111,13 @@ fn read_stdin_guess(score: &Score) -> Play {
                     guess.secret_guess = res;
                     break;
                 } else {
-                    println!("2 players have only 4 thumbs in total!!\n");
+                    println!("2 players have only 4 thumbs in total!!");
                     line.clear();
                     continue;
                 }
             }
             Err(_) => {
-                println!("Must by a number!!\n");
+                println!("Must by a number!!");
                 line.clear();
                 continue;
             }
@@ -130,7 +130,7 @@ fn read_stdin_guess(score: &Score) -> Play {
 fn game_is_won(score: &Score) -> bool {
     // print the actual score of the game
     println!(
-        "\nServer hands: {}\tPlayer hands: {}",
+        "\n\nServer hands: {}\tPlayer hands: {}\n",
         score.server_score, score.player_score
     );
 
@@ -146,7 +146,9 @@ fn game_is_won(score: &Score) -> bool {
 }
 
 fn main() {
-    let mut throbber = Throbber::new().message("Generating proof/Verification".to_string());
+    let mut proof_throbber = Throbber::new().message("Generating proof & Verification...".to_string());
+    let mut commit_throbber = Throbber::new().message("Server commiting to the guess...".to_string());
+    let mut round = 1;
 
     println!("Let's play TING TONG!!");
 
@@ -157,18 +159,24 @@ fn main() {
     };
 
     while game_won == false {
+        print!("\x1b[43m");
+        println!("\nRound {round}");
+        print!("\x1b[0m");
         let server_guess = Server::new_play(&score);
+        commit_throbber.start();
         let player = Player {
             hash: server_guess.get_secret(),
         };
+        commit_throbber.finish();
 
         let player_guess = read_stdin_guess(&score);
 
-        throbber.start();
+        proof_throbber.start();
         let receipt = server_guess.eval_round(player_guess, &score);
         score = player.check_receipt(receipt);
-        throbber.success("Success".to_string());
+        proof_throbber.finish();
 
         game_won = game_is_won(&score);
+        round+=1;
     }
 }
